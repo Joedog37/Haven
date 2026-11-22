@@ -28,8 +28,11 @@ app/build/
 *.swo
 *~
 
-# Large model files (~2.7GB+)
+# Large model files (~2.7GB+) — never commit to GitHub
 Model/
+*.gguf
+*.onnx
+*.bin
 
 # Backup archives
 *.7z

@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haven AI</title>
+    <style>
+        /* ===================== RESET & BASE ===================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #020208;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ===================== AWAKENING OVERLAY ===================== */
+        .awakening-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s ease;
+        }
+
+        .awakening-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .awakening-core {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            position: relative;
+            animation: corePulse 2s ease-in-out infinite;
+        }
+
+        .awakening-core::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #00f0ff;
+            box-shadow: 0 0 60px #00f0ff, 0 0 120px #00f0ff88;
+            animation: coreGrow 3s ease-out forwards;
+        }
+
+        .awakening-core::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            border: 2px solid #00f0ff44;
+            animation: ringExpand 3s ease-out forwards;
+        }
+
+        @keyframes corePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes coreGrow {
+            0% { width: 5px; height: 5px; opacity: 0; }
+            30% { opacity: 1; }
+            100% { width: 30px; height: 30px; opacity: 1; }
+        }
+
+        @keyframes ringExpand {
+            0% { width: 20px; height: 20px; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 200px; height: 200px; opacity: 0; }
+        }
+
+        .awakening-text {
+            margin-top: 40px;
+            font-size: 14px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: #00f0ff88;
+            animation: textFade 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes textFade {
+            from { opacity: 0.3; }
+            to { opacity: 1; }
+        }
+
+        .awakening-lines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+        }
+
+        .awakening-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00f0ff44, transparent);
+            animation: lineSweep 3s ease-in-out infinite;
+        }
+
+        @keyframes lineSweep {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* ===================== ENVIRONMENT BACKGROUND ===================== */
+        .environment {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        /* Starfield */
+        .stars {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px; height: 2px;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle var(--duration) ease-in-out infinite alternate;
+        }
+
+        @keyframes twinkle {
+            from { opacity: 0.1; }
+            to { opacity: var(--max-opacity); }
+        }
+
+        /* Grid floor */
+        .grid-floor {
+            position: absolute;
+            bottom: 0; left: -50%; right: -50%;
+            height: 40%;
+            background:
+                linear-gradient(90deg, #00f0ff11 1px, transparent 1px),
+                linear-gradient(0deg, #00f0ff11 1px, transparent 1px);
+            background-size: 60px 40px;
+            transform: perspective(500px) rotateX(60deg);
+            transform-origin: bottom;
+            animation: gridScroll 20s linear infinite;
+        }
+
+        @keyframes gridScroll {
+            from { background-position: 0 0; }
+            to { background-position: 0 40px; }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: var(--size);
+            height: var(--size);
+            background: radial-gradient(circle, #00f0ff88, transparent);
+            border-radius: 50%;
+            animation: float var(--duration) ease-in-out infinite alternate;
+        }
+
+        @keyframes float {
+            from { transform: translate(0, 0); opacity: 0.2; }
+            to { transform: translate(var(--dx), var(--dy)); opacity: 0.6; }
+        }
+
+        /* Scan lines */
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                #00f0ff08 2px,
+                #00f0ff08 4px
+            );
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* ===================== LAYOUT ===================== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 320px 1fr 300px;
+            grid-template-rows: 50px 1fr;
+            height: 100vh;
+            gap: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===================== HEADER ===================== */
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #0a0a1aee, #0d1b2aee);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid #00f0ff22;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff, #0088ff);
+            box-shadow: 0 0 20px #00f0ff88;
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 20px #00f0ff88; }
+            50% { box-shadow: 0 0 40px #00f0ffcc; }
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 6px;
+            color: #00f0ff;
+            text-transform: uppercase;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #333;
+            transition: all 0.5s;
+        }
+
+        .status-dot.online {
+            background: #00ff88;
+            box-shadow: 0 0 12px #00ff88;
+        }
+
+        .status-dot.warning {
+            background: #ffaa00;
+            box-shadow: 0 0 12px #ffaa00;
+        }
+
+        /* ===================== LEFT PANEL — AVATAR ===================== */
+        .avatar-panel {
+            background: linear-gradient(180deg, #0a0a1acc, #050510cc);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-right: 1px solid #00f0ff11;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ambient glow behind avatar */
+        .avatar-glow {
+            position: absolute;
+            width: 300px; height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff15, transparent 70%);
+            animation: glowPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* Avatar container with 3D perspective */
+        .avatar-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            margin-bottom: 24px;
+            z-index: 2;
+            perspective: 600px;
+        }
+
+        /* 3D Avatar face wrapper */
+        .avatar-3d {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            transform-style: preserve-3d;
+            animation: headFloat 8s ease-in-out infinite;
+        }
+
+        /* Very subtle idle breathing — almost imperceptible */
+        @keyframes headFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Avatar state: listening — subtle tilt forward */
+        .avatar-3d.listening {
+            animation: headListen 3s ease-in-out infinite;
+        }
+
+        @keyframes headListen {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* Avatar state: speaking — gentle movement */
+        .avatar-3d.speaking {
+            animation: headSpeak 2s ease-in-out infinite;
+        }
+
+        @keyframes headSpeak {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+
+        /* Avatar state: thinking — slight pause */
+        .avatar-3d.thinking {
+            animation: headThink 4s ease-in-out infinite;
+        }
+
+        @keyframes headThink {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* Real face image wrapper */
+        .avatar-face-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            clip-path: circle(50%);
+        }
+
+        /* Real face image */
+        .avatar-face-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            border-radius: 50%;
+            display: block;
+            transition: filter 0.5s ease, transform 0.3s ease;
+            filter: brightness(1.05) contrast(1.05) saturate(1.1);
+            clip-path: circle(50%);
+        }
+
+        /* Fallback SVG face */
+        .avatar-face-fallback {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .avatar-face-fallback svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Holographic scan overlay on the real face */
+        .face-hologram-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .face-hologram-overlay::after {
+            content: '';
+            position: absolute;
+            top: -100%; left: 0; right: 0;
+            height: 200%;
+            background: linear-gradient(
+                180deg,
+                transparent 0%,
+                rgba(0, 240, 255, 0.06) 40%,
+                rgba(0, 240, 255, 0.12) 50%,
+                rgba(0, 240, 255, 0.06) 60%,
+                transparent 100%
+            );
+            animation: faceHoloScan 3.5s linear infinite;
+        }
+
+        @keyframes faceHoloScan {
+            from { transform: translateY(-50%); }
+            to { transform: translateY(0%); }
+        }
+
+        /* State-based tint overlay for the real face */
+        .face-state-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: background 0.5s ease, box-shadow 0.5s ease;
+            background: transparent;
+        }
+
+        /* Idle state — subtle cyan glow */
+        .avatar-3d.idle .face-state-overlay {
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+            box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.1);
+        }
+
+        /* Listening state — green tint */
+        .avatar-3d.listening .face-state-overlay {
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+            box-shadow: inset 0 0 40px rgba(0, 255, 136, 0.15);
+        }
+
+        .avatar-3d.listening .avatar-face-img {
+            filter: brightness(1.1) contrast(1.1) saturate(1.2) hue-rotate(20deg);
+        }
+
+        /* Speaking state — cyan glow pulse */
+        .avatar-3d.speaking .face-state-overlay {
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+            box-shadow: inset 0 0 40px rgba(0, 240, 255, 0.15);
+            animation: speakingOverlay 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes speakingOverlay {
+            0% { box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.1); }
+            100% { box-shadow: inset 0 0 45px rgba(0, 240, 255, 0.2); }
+        }
+
+        .avatar-3d.speaking .avatar-face-img {
+            filter: brightness(1.1) contrast(1.05) saturate(1.15);
+        }
+
+        /* Thinking state — purple tint */
+        .avatar-3d.thinking .face-state-overlay {
+            background: radial-gradient(circle, rgba(170, 136, 255, 0.1) 0%, transparent 70%);
+            box-shadow: inset 0 0 40px rgba(170, 136, 255, 0.15);
+        }
+
+        .avatar-3d.thinking .avatar-face-img {
+            filter: brightness(1.05) contrast(1.05) saturate(1.0) hue-rotate(-10deg);
+        }
+
+        /* Holographic scan effect on outer container */
+        .avatar-hologram {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .avatar-hologram::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(
+                180deg,
+                transparent 0%,
+                #00f0ff11 50%,
+                transparent 100%
+            );
+            animation: holoScan 4s linear infinite;
+        }
+
+        @keyframes holoScan {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(100%); }
+        }
+
+        /* Face energy particles */
+        .face-particles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+
+        .face-particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #00f0ff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: faceParticleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes faceParticleFloat {
+            0% { opacity: 0; transform: translateY(0) scale(0); }
+            50% { opacity: 0.8; transform: translateY(-20px) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(0); }
+        }
+
+        /* Iris glow pulse — for fallback SVG */
+        .iris-glow {
+            animation: irisPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes irisPulse {
+            0%, 100% { opacity: 0.6; r: 5; }
+            50% { opacity: 1; r: 6; }
+        }
+
+        /* State-specific eye color — for fallback SVG */
+        .avatar-3d.listening .iris-glow {
+            fill: #00ff88;
+            filter: drop-shadow(0 0 8px #00ff88);
+        }
+
+        .avatar-3d.speaking .iris-glow {
+            fill: #00f0ff;
+            filter: drop-shadow(0 0 12px #00f0ff);
+        }
+
+        .avatar-3d.thinking .iris-glow {
+            fill: #aa88ff;
+            filter: drop-shadow(0 0 10px #aa88ff);
+        }
+
+        /* Breathing ring */
+        .avatar-ring {
+            position: absolute;
+            top: -15px; left: -15px; right: -15px; bottom: -15px;
+            border-radius: 50%;
+            border: 1px solid #00f0ff33;
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        .avatar-ring:nth-child(2) {
+            top: -25px; left: -25px; right: -25px; bottom: -25px;
+            border-color: #00f0ff22;
+            animation-delay: 0.5s;
+        }
+
+        .avatar-ring:nth-child(3) {
+            top: -35px; left: -35px; right: -35px; bottom: -35px;
+            border-color: #00f0ff11;
+            animation-delay: 1s;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.03); opacity: 0.8; }
+        }
+
+        /* Neural activity arcs */
+        .neural-arcs {
+            position: absolute;
+            top: -20px; left: -20px; right: -20px; bottom: -20px;
+            z-index: -1;
+        }
+
+        .neural-arc {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 140%; height: 140%;
+            transform-origin: center;
+            border: 1px solid transparent;
+            border-top-color: #00f0ff44;
+            border-radius: 50%;
+            animation: arcRotate var(--duration) linear infinite;
+        }
+
+        @keyframes arcRotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Avatar name and status */
+        .avatar-name {
+            font-size: 22px;
+            color: #00f0ff;
+            letter-spacing: 8px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #00f0ff88;
+            z-index: 2;
+        }
+
+        .avatar-status {
+            font-size: 11px;
+            color: #555;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        .avatar-status.online {
+            color: #00ff88;
+            text-shadow: 0 0 10px #00ff8888;
+        }
+
+        /* Heartbeat indicator */
+        .heartbeat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            z-index: 2;
+        }
+
+        .heartbeat-line {
+            width: 80px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .heartbeat-line svg {
+            position: absolute;
+            top: 0;
+            animation: heartbeatScroll 2s linear infinite;
+        }
+
+        @keyframes heartbeatScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        .heartbeat-text {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Voice controls */
+        .voice-controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 2;
+        }
+
+        .mic-button {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 1px solid #00f0ff33;
+            background: #0a0a1a88;
+            color: #00f0ff;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .mic-button:hover {
+            border-color: #00f0ff;
+            box-shadow: 0 0 30px #00f0ff44;
+        }
+
+        .mic-button.active {
+            border-color: #ff4444;
+            background: #ff444422;
+            animation: mic-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes mic-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 #ff444466; }
+            50% { box-shadow: 0 0 0 20px #ff444400; }
+        }
+
+        .voice-label {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ===================== CENTER — CHAT ===================== */
+        .chat-panel {
+            background: #020208cc;
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 0;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #00f0ff33;
+            border-radius: 2px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+            animation: messageIn 0.4s ease;
+            position: relative;
+        }
+
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1a3a5c, #0d2240);
+            border: 1px solid #0088ff33;
+            border-bottom-right-radius: 12px;
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+
+        .message.haven {
+            align-self: flex-start;
+            background: linear-gradient(135deg, #0a1a2a, #0d1b2a);
+            border: 1px solid #00f0ff22;
+            border-bottom-left-radius: 12px;
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 0 20px #00f0ff11;
+        }
+
+        .message.system {
+            align-self: center;
+            background: transparent;
+            border: 1px solid #33333333;
+            color: #555;
+            font-style: italic;
+            font-size: 12px;
+            padding: 8px 16px;
+        }
+
+        /* Typing indicator — lives inside chat-messages so it doesn't push the input bar */
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #0a1a2a, #0d1b2a);
+            border: 1px solid #00f0ff22;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 0 20px #00f0ff11;
+            flex-shrink: 0;
+        }
+
+        .typing-indicator.visible {
+            display: flex;
+            gap: 6px;
+        }
+
+        .typing-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #00f0ff;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Chat input — pinned to bottom, never hidden */
+        .chat-input-area {
+            padding: 16px 24px;
+            background: #0a0a1acc;
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #00f0ff11;
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #050510;
+            border: 1px solid #222;
+            border-radius: 4px;
+            padding: 14px 20px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 20px #00f0ff22;
+        }
+
+        .chat-input::placeholder {
+            color: #444;
+            letter-spacing: 1px;
+        }
+
+        .send-button {
+            width: 48px; height: 48px;
+            border-radius: 4px;
+            border: 1px solid #00f0ff44;
+            background: #0a0a1a;
+            color: #00f0ff;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover {
+            background: #00f0ff22;
+            border-color: #00f0ff;
+            box-shadow: 0 0 20px #00f0ff44;
+        }
+
+        /* ===================== RIGHT PANEL — SYSTEM ===================== */
+        .system-panel {
+            background: linear-gradient(180deg, #0a0a1acc, #050510cc);
+            backdrop-filter: blur(5px);
+            border-left: 1px solid #00f0ff11;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .system-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .system-panel::-webkit-scrollbar-thumb {
+            background: #00f0ff33;
+            border-radius: 2px;
+        }
+
+        .panel-section {
+            margin-bottom: 28px;
+        }
+
+        .panel-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #00f0ff66;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #00f0ff11;
+        }
+
+        /* System metrics */
+        .system-metric {
+            margin-bottom: 14px;
+        }
+
+        .metric-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .metric-bar {
+            height: 3px;
+            background: #111;
+            border-radius: 1px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f0ff, #0088ff);
+            border-radius: 1px;
+            transition: width 0.8s ease;
+            box-shadow: 0 0 10px #00f0ff44;
+        }
+
+        .metric-fill.warning {
+            background: linear-gradient(90deg, #ffaa00, #ff6600);
+            box-shadow: 0 0 10px #ffaa0044;
+        }
+
+        .metric-fill.danger {
+            background: linear-gradient(90deg, #ff4444, #ff0000);
+            box-shadow: 0 0 10px #ff444444;
+        }
+
+        /* User profile */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #0a0a1a88;
+            border: 1px solid #00f0ff11;
+            border-radius: 4px;
+        }
+
+        .user-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00f0ff, #0088ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #0a0a1a;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px #00f0ff44;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 14px;
+            color: #e0e0e0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-label {
+            font-size: 9px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .edit-name-btn {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .edit-name-btn:hover {
+            border-color: #00f0ff;
+            color: #00f0ff;
+        }
+
+        /* Memory stats */
+        .memory-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .memory-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 8px 12px;
+            background: #0a0a1a88;
+            border: 1px solid #00f0ff11;
+            border-radius: 4px;
+        }
+
+        .memory-stat-label {
+            color: #666;
+            letter-spacing: 1px;
+        }
+
+        .memory-stat-value {
+            color: #00f0ff;
+            font-weight: 500;
+        }
+
+        /* Neural activity display */
+        .neural-display {
+            padding: 12px;
+            background: #0a0a1a88;
+            border: 1px solid #00f0ff11;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .neural-label {
+            font-size: 9px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .neural-bars {
+            display: flex;
+            align-items: end;
+            gap: 2px;
+            height: 30px;
+        }
+
+        .neural-bar {
+            flex: 1;
+            background: #00f0ff44;
+            border-radius: 1px;
+            animation: neuralPulse var(--duration) ease-in-out infinite alternate;
+        }
+
+        @keyframes neuralPulse {
+            from { height: var(--min-h); }
+            to { height: var(--max-h); }
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-button {
+            padding: 10px 14px;
+            background: #0a0a1a88;
+            border: 1px solid #222;
+            border-radius: 4px;
+            color: #aaa;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            letter-spacing: 1px;
+        }
+
+        .action-button:hover {
+            border-color: #00f0ff;
+            background: #00f0ff11;
+            color: #00f0ff;
+        }
+
+        /* ===================== AUDIO PLAYER ===================== */
+        .audio-player {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #0a0a1a88;
+            border: 1px solid #00f0ff11;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .audio-player.visible {
+            display: flex;
+        }
+
+        .play-btn {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 1px solid #00f0ff;
+            background: transparent;
+            color: #00f0ff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .audio-label {
+            font-size: 10px;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 260px 1fr 260px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50px auto 1fr auto;
+            }
+            .avatar-panel {
+                flex-direction: row;
+                padding: 10px 20px;
+                border-right: none;
+                border-bottom: 1px solid #00f0ff11;
+            }
+            .avatar-container {
+                width: 60px; height: 60px;
+                margin-bottom: 0;
+                margin-right: 16px;
+            }
+            .avatar-name, .avatar-status, .heartbeat, .voice-controls {
+                display: none;
+            }
+            .system-panel {
+                border-left: none;
+                border-top: 1px solid #00f0ff11;
+                max-height: 200px;
+            }
+        }
+
+        /* ===================== GAME OVERLAY ===================== */
+        .game-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 9000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-overlay.active {
+            display: flex;
+        }
+
+        .game-container {
+            background: #0a0a1a;
+            border: 1px solid #00f0ff44;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 40px #00f0ff22;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #00f0ff33;
+            background: #050510;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .game-header h2 {
+            color: #00f0ff;
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .game-close-btn {
+            background: none;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            font-size: 16px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .game-close-btn:hover {
+            background: #ff4444;
+            color: #fff;
+        }
+
+        .game-setup {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .game-setup h3 {
+            color: #00f0ff;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            color: #888;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: #050510;
+            border: 1px solid #00f0ff33;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #00f0ff;
+        }
+
+        .setup-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .game-btn {
+            padding: 10px 20px;
+            background: #00f0ff22;
+            border: 1px solid #00f0ff44;
+            border-radius: 6px;
+            color: #00f0ff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .game-btn:hover {
+            background: #00f0ff44;
+        }
+
+        .game-btn.primary {
+            background: #00f0ff44;
+            border-color: #00f0ff;
+        }
+
+        .game-btn.primary:hover {
+            background: #00f0ff66;
+        }
+
+        .game-play {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 15px;
+            padding: 10px 20px;
+            background: #050510;
+            border-bottom: 1px solid #00f0ff22;
+            flex-wrap: wrap;
+        }
+
+        .game-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .game-stat-value {
+            color: #00f0ff;
+            font-weight: bold;
+        }
+
+        .game-story {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            max-height: 300px;
+        }
+
+        .game-story p {
+            margin-bottom: 10px;
+        }
+
+        .game-choices {
+            padding: 15px 20px;
+            border-top: 1px solid #00f0ff22;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            padding: 8px 15px;
+            background: #00f0ff11;
+            border: 1px solid #00f0ff33;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .choice-btn:hover {
+            background: #00f0ff33;
+            border-color: #00f0ff;
+        }
+
+        .game-input-area {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid #00f0ff22;
+            background: #050510;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .game-input {
+            flex: 1;
+            padding: 10px;
+            background: #0a0a1a;
+            border: 1px solid #00f0ff33;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .game-input:focus {
+            outline: none;
+            border-color: #00f0ff;
+        }
+    
+        /* ===== Haven v1.3: in-code avatar — no picture file ===== */
+        /* The avatar is drawn in SVG inside this file. There is no
+           background image, no PNG, no checkerboard: the panel's own
+           dark GUI gradient shows through behind her, so she belongs
+           in the scene instead of sitting in a box. */
+        .avatar-face-wrapper {
+            border-radius: 0 !important;
+            clip-path: none !important;
+            overflow: visible !important;
+            background: transparent !important;
+        }
+        .avatar-face-img, .avatar-face-fallback { display: none !important; }
+        .face-hologram-overlay, .face-state-overlay { border-radius: 0 !important; }
+        .haven-avatar-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+        .haven-breathe { animation: havenBreathe 4s ease-in-out infinite; transform-origin: 120px 200px; }
+        @keyframes havenBreathe {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-4px) scale(1.01); }
+        }
+        .haven-eye { animation: havenBlink 4.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+        @keyframes havenBlink {
+            0%, 92%, 100% { transform: scaleY(1); }
+            94%, 96% { transform: scaleY(0.08); }
+        }
+        .chest-core { animation: chestPulse 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+        @keyframes chestPulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        .haven-hair-streak { animation: streakGlow 3s ease-in-out infinite alternate; }
+        @keyframes streakGlow { from { opacity: 0.4; } to { opacity: 1; } }
+        /* Speaking: mouth opens and closes, head bobs a little faster */
+        .avatar-3d.speaking #mouthOpen { animation: havenSpeakMouth 0.32s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+        @keyframes havenSpeakMouth { from { transform: scaleY(0.6); } to { transform: scaleY(3.2); } }
+        .avatar-3d.speaking #mouthLine { opacity: 0.35; }
+        .avatar-3d.speaking .haven-breathe { animation-duration: 2s; }
+        /* Listening: lean in a touch, eyes brighter */
+        .avatar-3d.listening .haven-breathe { animation-duration: 3s; }
+        /* Thinking: slow breathing, mouth still */
+        .avatar-3d.thinking .haven-breathe { animation-duration: 5s; }
+        .avatar-3d.thinking #mouthOpen { transform: scaleY(0.4); }
+
+    
+        .haven-circuit { animation: circuitGlow 3s ease-in-out infinite alternate; }
+        @keyframes circuitGlow { from { opacity: 0.55; } to { opacity: 1; } }
+
+    
+        /* Haven v1.6: free-talk + she-speaks-first toggles */
+        .toggle-button {
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+            padding: 7px 10px;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            color: #7fa8b8;
+            background: #0a1826;
+            border: 1px solid #00f0ff33;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .toggle-button.on {
+            color: #00ff88;
+            border-color: #00ff8855;
+            background: #0a2a1a;
+            box-shadow: 0 0 10px #00ff8833;
+        }
+        .voice-controls { width: 100%; max-width: 220px; }
+
+    </style>
+</head>
+<body>
+    <!-- AWAKENING OVERLAY -->
+    <div class="awakening-overlay" id="awakeningOverlay">
+        <div class="awakening-lines">
+            <div class="awakening-line" style="top: 20%; width: 100%; animation-delay: 0s;"></div>
+            <div class="awakening-line" style="top: 40%; width: 80%; animation-delay: 0.5s;"></div>
+            <div class="awakening-line" style="top: 60%; width: 100%; animation-delay: 1s;"></div>
+            <div class="awakening-line" style="top: 80%; width: 90%; animation-delay: 1.5s;"></div>
+        </div>
+        <div class="awakening-core"></div>
+        <div class="awakening-text">Initializing Haven</div>
+    </div>
+
+    <!-- ENVIRONMENT BACKGROUND -->
+    <div class="environment">
+        <div class="stars" id="stars"></div>
+        <div class="grid-floor"></div>
+        <div class="particles" id="particles"></div>
+        <div class="scanlines"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-title">
+                <div class="header-logo"></div>
+                <h1>Haven</h1>
+            </div>
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot" id="modelDot"></div>
+                    <span>Core</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="memoryDot"></div>
+                    <span>Memory</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="ttsDot"></div>
+                    <span>Voice</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="sttDot"></div>
+                    <span>Listen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEFT — AVATAR -->
+        <div class="avatar-panel">
+            <div class="avatar-glow"></div>
+            <div class="avatar-container">
+                <div class="avatar-ring"></div>
+                <div class="avatar-ring"></div>
+                <div class="avatar-ring"></div>
+                <div class="neural-arcs">
+                    <div class="neural-arc" style="--duration: 8s;"></div>
+                    <div class="neural-arc" style="--duration: 12s; transform: rotate(60deg);"></div>
+                    <div class="neural-arc" style="--duration: 16s; transform: rotate(120deg);"></div>
+                </div>
+                <div class="avatar-3d" id="avatar3d">
+                    <!-- Real face image with holographic overlay -->
+                    <div class="avatar-face-wrapper">
+                        <svg class="haven-avatar-svg" id="havenAvatarSvg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Haven">
+                            <defs>
+                                <linearGradient id="havenFaceGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#23384a"/>
+                                    <stop offset="55%" stop-color="#12222f"/>
+                                    <stop offset="100%" stop-color="#0a1520"/>
+                                </linearGradient>
+                                <linearGradient id="havenSuitGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#16283a"/>
+                                    <stop offset="100%" stop-color="#070d14"/>
+                                </linearGradient>
+                                <radialGradient id="havenCoreGrad" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#bff6ff"/>
+                                    <stop offset="45%" stop-color="#00f0ff"/>
+                                    <stop offset="100%" stop-color="#00f0ff" stop-opacity="0.15"/>
+                                </radialGradient>
+                                <filter id="havenGlow" x="-80%" y="-80%" width="260%" height="260%">
+                                    <feGaussianBlur stdDeviation="2.2" result="blur"/>
+                                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            <g class="haven-breathe" id="havenFigure">
+                                <!-- shoulders / suit: redrawn from the original picture.
+                                     Black bodysuit, high collar, bright cyan circuit lines
+                                     branching from the chest core across chest, shoulders
+                                     and torso — the same look as the original picture, drawn
+                                     in code so there is still no picture file. -->
+                                <path d="M38 240 Q42 188 82 176 L158 176 Q198 188 202 240 Z" fill="url(#havenSuitGrad)" stroke="#00f0ff" stroke-opacity="0.45" stroke-width="1.2"/>
+                                <path d="M48 212 Q56 186 84 178 L92 192 Q70 198 62 218 Z" fill="#0b1723" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="0.8"/>
+                                <path d="M192 212 Q184 186 156 178 L148 192 Q170 198 178 218 Z" fill="#0b1723" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="0.8"/>
+                                <path d="M104 176 L136 176 L132 190 L108 190 Z" fill="#0a1826" stroke="#00f0ff" stroke-opacity="0.5" stroke-width="0.9"/>
+                                <g class="haven-circuit" stroke="#00f0ff" stroke-width="1.3" fill="none" stroke-linecap="round" filter="url(#havenGlow)">
+                                    <path d="M120 176 L120 199" stroke-width="1.6"/>
+                                    <path d="M120 184 Q104 188 92 196 M120 184 Q136 188 148 196"/>
+                                    <path d="M120 192 Q102 200 84 210 M120 192 Q138 200 156 210"/>
+                                    <path d="M96 184 Q88 200 92 214 M144 184 Q152 200 148 214"/>
+                                    <path d="M92 196 Q84 206 86 220 M148 196 Q156 206 154 220"/>
+                                    <path d="M120 225 L120 240"/>
+                                    <path d="M104 226 Q100 234 104 240 M136 226 Q140 234 136 240"/>
+                                    <path d="M88 224 Q82 232 84 240 M152 224 Q158 232 156 240"/>
+                                    <path d="M58 200 L76 214 M182 200 L164 214"/>
+                                    <path d="M52 216 Q60 206 72 202 M188 216 Q180 206 168 202" stroke-opacity="0.7"/>
+                                    <path d="M108 178 L108 188 M132 178 L132 188" stroke-opacity="0.7"/>
+                                </g>
+                                <g fill="#00f0ff" filter="url(#havenGlow)">
+                                    <circle cx="120" cy="184" r="2"/>
+                                    <circle cx="92" cy="196" r="1.6"/><circle cx="148" cy="196" r="1.6"/>
+                                    <circle cx="84" cy="210" r="1.6"/><circle cx="156" cy="210" r="1.6"/>
+                                    <circle cx="120" cy="199" r="1.6"/>
+                                </g>
+                                <circle class="chest-core" cx="120" cy="212" r="13" fill="url(#havenCoreGrad)" filter="url(#havenGlow)"/>
+                                <circle cx="120" cy="212" r="5" fill="#e8fdff"/>
+                                <!-- neck -->
+                                <path d="M108 150 L132 150 L128 180 L112 180 Z" fill="#101f2e" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="0.8"/>
+                                <g id="havenHead">
+                                    <!-- hair, back -->
+                                    <path d="M68 108 Q62 52 120 46 Q178 52 172 108 Q170 128 162 132 Q168 84 120 78 Q72 84 78 132 Q70 128 68 108 Z" fill="#0a1622" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="1"/>
+                                    <path class="haven-hair-streak" d="M74 100 Q76 66 96 56" stroke="#00f0ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                                    <path class="haven-hair-streak" d="M166 100 Q164 66 144 56" stroke="#00f0ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                                    <!-- face -->
+                                    <ellipse cx="120" cy="106" rx="52" ry="60" fill="url(#havenFaceGrad)" stroke="#00f0ff" stroke-opacity="0.5" stroke-width="1.4"/>
+                                    <ellipse cx="102" cy="86" rx="18" ry="10" fill="#ffffff" opacity="0.05"/>
+                                    <!-- forehead circuit + gem -->
+                                    <path d="M96 62 L120 54 L144 62" stroke="#00f0ff" stroke-opacity="0.55" stroke-width="1" fill="none"/>
+                                    <circle cx="120" cy="58" r="4" fill="none" stroke="#00f0ff" stroke-width="0.8" opacity="0.7"/>
+                                    <circle cx="120" cy="58" r="1.6" fill="#00f0ff" filter="url(#havenGlow)"/>
+                                    <path d="M88 74 L104 74 M136 74 L152 74" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="0.8"/>
+                                    <!-- eyebrows -->
+                                    <path d="M92 92 Q104 88 114 91" stroke="#00f0ff" stroke-opacity="0.7" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                                    <path d="M126 91 Q136 88 148 92" stroke="#00f0ff" stroke-opacity="0.7" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                                    <!-- eyes -->
+                                    <g id="avatarPupils">
+                                        <g class="haven-eye">
+                                            <ellipse cx="103" cy="102" rx="13" ry="9" fill="#08131d" stroke="#00f0ff" stroke-opacity="0.55" stroke-width="1"/>
+                                            <circle class="iris-glow" cx="103" cy="102" r="5.5" fill="#00f0ff" filter="url(#havenGlow)"/>
+                                            <circle cx="103" cy="102" r="2.4" fill="#02141a"/>
+                                            <circle cx="105" cy="100" r="1.4" fill="#ffffff" opacity="0.75"/>
+                                        </g>
+                                        <g class="haven-eye">
+                                            <ellipse cx="137" cy="102" rx="13" ry="9" fill="#08131d" stroke="#00f0ff" stroke-opacity="0.55" stroke-width="1"/>
+                                            <circle class="iris-glow" cx="137" cy="102" r="5.5" fill="#00f0ff" filter="url(#havenGlow)"/>
+                                            <circle cx="137" cy="102" r="2.4" fill="#02141a"/>
+                                            <circle cx="139" cy="100" r="1.4" fill="#ffffff" opacity="0.75"/>
+                                        </g>
+                                    </g>
+                                    <!-- nose + cheek circuits -->
+                                    <path d="M120 112 L118 126 L122 126" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="1" fill="none" stroke-linecap="round"/>
+                                    <circle cx="88" cy="124" r="1.2" fill="#00f0ff" opacity="0.5"/>
+                                    <circle cx="152" cy="124" r="1.2" fill="#00f0ff" opacity="0.5"/>
+                                    <!-- mouth: line + opening that moves when she speaks -->
+                                    <path id="mouthLine" d="M106 144 Q120 150 134 144" stroke="#00f0ff" stroke-opacity="0.85" stroke-width="2" fill="none" stroke-linecap="round"/>
+                                    <ellipse id="mouthOpen" cx="120" cy="148" rx="6" ry="1.6" fill="#00f0ff" opacity="0.9" filter="url(#havenGlow)"/>
+                                </g>
+                            </g>
+                        </svg>
+                        <!-- Holographic scan overlay on the real face -->
+                        <div class="face-hologram-overlay"></div>
+                        <!-- State-based tint overlay -->
+                        <div class="face-state-overlay" id="faceStateOverlay"></div>
+                    </div>
+                </div>
+                <div class="avatar-hologram"></div>
+                <div class="face-particles" id="faceParticles"></div>
+            </div>
+            <div class="avatar-name">HAVEN</div>
+            <div class="avatar-status" id="avatarStatus">Initializing...</div>
+
+            <div class="heartbeat">
+                <div class="heartbeat-line">
+                    <svg width="160" height="20" viewBox="0 0 160 20">
+                        <polyline points="0,10 20,10 30,10 35,2 40,18 45,14 50,10 70,10 80,10 90,10 95,2 100,18 105,14 110,10 130,10 140,10 150,10 155,2 160,18" fill="none" stroke="#00f0ff44" stroke-width="1"/>
+                        <polyline points="0,10 20,10 30,10 35,2 40,18 45,14 50,10 70,10 80,10 90,10 95,2 100,18 105,14 110,10 130,10 140,10 150,10 155,2 160,18" fill="none" stroke="#00f0ff44" stroke-width="1"/>
+                    </svg>
+                </div>
+                <span class="heartbeat-text">Active</span>
+            </div>
+
+            <div class="voice-controls">
+                <button class="mic-button" id="micButton" title="Voice input — one thing, then stop">🎤</button>
+                <div class="voice-label">Speak</div>
+                <button class="toggle-button" id="freeTalkButton" title="Talk freely — no wake word. Just speak, it runs. Click again to stop.">Free talk: Off</button>
+                <button class="toggle-button on" id="speakFirstButton" title="Haven speaks first after 5 minutes quiet. Click to turn off.">She speaks first: On</button>
+            </div>
+        </div>
+
+        <!-- CENTER — CHAT -->
+        <div class="chat-panel">
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Speak to Haven..." autocomplete="off">
+                <button class="send-button" id="sendButton">➤</button>
+            </div>
+        </div>
+
+        <!-- RIGHT — SYSTEM -->
+        <div class="system-panel">
+            <div class="panel-section">
+                <div class="panel-title">Neural Activity</div>
+                <div class="neural-display">
+                    <div class="neural-label">Processing threads</div>
+                    <div class="neural-bars" id="neuralBars"></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">System</div>
+                <div class="system-metric">
+                    <div class="metric-label">
+                        <span>CPU</span>
+                        <span id="cpuValue">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="cpuBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="system-metric">
+                    <div class="metric-label">
+                        <span>Memory</span>
+                        <span id="memValue">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="memBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="system-metric">
+                    <div class="metric-label">
+                        <span>Disk</span>
+                        <span id="diskValue">0%</span>
+                    </div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="diskBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">User</div>
+                <div class="user-profile" id="userProfile">
+                    <div class="user-avatar" id="userAvatar">?</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Detecting...</div>
+                        <div class="user-label">Connected</div>
+                    </div>
+                    <button class="edit-name-btn" id="editNameBtn" title="Change name">✎</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">Memory</div>
+                <div class="memory-stats" id="memoryStats">
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Facts</span>
+                        <span class="memory-stat-value" id="memFacts">0</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Learned</span>
+                        <span class="memory-stat-value" id="memLearned">0</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Conversations</span>
+                        <span class="memory-stat-value" id="memConv">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">Actions</div>
+                <div class="quick-actions">
+                    <button class="action-button" onclick="clearChat()">Clear chat</button>
+                    <button class="action-button" onclick="loadMemoryInfo()">Memory context</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">Games</div>
+                <div class="quick-actions">
+                    <button class="action-button" onclick="openDnDGame()">⚔️ DnD Adventure</button>
+                    <button class="action-button" onclick="openOregonGame()">🏜️ Oregon Trail</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== GAME OVERLAY ===================== -->
+    <div class="game-overlay" id="gameOverlay">
+        <div class="game-container">
+            <div class="game-header">
+                <h2 id="gameTitle">Game</h2>
+                <button class="game-close-btn" onclick="closeGame()">✕</button>
+            </div>
+
+            <!-- Game Setup Panel -->
+            <div class="game-setup" id="gameSetup">
+                <div id="dndSetup" style="display:none;">
+                    <h3>⚔️ Create Your Character</h3>
+                    <div class="form-group">
+                        <label>Character Name:</label>
+                        <input type="text" id="dndPlayerName" placeholder="Enter name..." value="Hero">
+                    </div>
+                    <div class="form-group">
+                        <label>Class:</label>
+                        <select id="dndClass">
+                            <option value="warrior">Warrior</option>
+                            <option value="mage">Mage</option>
+                            <option value="rogue">Rogue</option>
+                            <option value="cleric">Cleric</option>
+                            <option value="ranger">Ranger</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Race:</label>
+                        <select id="dndRace">
+                            <option value="human">Human</option>
+                            <option value="elf">Elf</option>
+                            <option value="dwarf">Dwarf</option>
+                            <option value="orc">Orc</option>
+                            <option value="halfling">Halfling</option>
+                        </select>
+                    </div>
+                    <div class="setup-buttons">
+                        <button class="game-btn primary" onclick="startDnDGame()">Start Adventure</button>
+                        <button class="game-btn" onclick="loadDnDGame()">Load Saved Game</button>
+                    </div>
+                </div>
+
+                <div id="oregonSetup" style="display:none;">
+                    <h3>🏜️ Begin Your Journey</h3>
+                    <div class="form-group">
+                        <label>Your Name:</label>
+                        <input type="text" id="oregonPlayerName" placeholder="Enter name..." value="Pioneer">
+                    </div>
+                    <div class="form-group">
+                        <label>Profession:</label>
+                        <select id="oregonProfession">
+                            <option value="farmer">Farmer</option>
+                            <option value="hunter">Hunter</option>
+                            <option value="merchant">Merchant</option>
+                            <option value="soldier">Soldier</option>
+                        </select>
+                    </div>
+                    <div class="setup-buttons">
+                        <button class="game-btn primary" onclick="startOregonGame()">Start Journey</button>
+                        <button class="game-btn" onclick="loadOregonGame()">Load Saved Game</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Play Panel -->
+            <div class="game-play" id="gamePlay" style="display:none;">
+                <!-- Stats Bar -->
+                <div class="game-stats" id="gameStats"></div>
+
+                <!-- Story Area -->
+                <div class="game-story" id="gameStory"></div>
+
+                <!-- Voice Button -->
+                <div class="game-voice-area" style="text-align:center; margin: 8px 0;">
+                    <button class="game-btn" onclick="readGameStoryAloud()" style="font-size:14px; padding: 6px 16px;">
+                        🔊 Read Aloud
+                    </button>
+                </div>
+
+                <!-- Choices Area -->
+                <div class="game-choices" id="gameChoices"></div>
+
+                <!-- Custom Input -->
+                <div class="game-input-area">
+                    <input type="text" class="game-input" id="gameCustomInput" placeholder="Type a custom action...">
+                    <button class="game-btn" onclick="sendCustomAction()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================== STATE =====================
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
+        let isRecording = false;
+        let recognition = null;
+
+        // ===================== ELEMENTS =====================
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        let typingIndicator = null;
+        const micButton = document.getElementById('micButton');
+        const avatar3d = document.getElementById('avatar3d');
+
+        // ===================== AVATAR STATE =====================
+        let avatarState = 'idle'; // idle, listening, speaking, thinking
+        let avatarStateTimer = null;
+        let eyeTargetX = 0;
+        let eyeTargetY = 0;
+        let eyeCurrentX = 0;
+        let eyeCurrentY = 0;
+
+        function setAvatarState(state, duration) {
+            // Clear any pending timer
+            if (avatarStateTimer) {
+                clearTimeout(avatarStateTimer);
+                avatarStateTimer = null;
+            }
+
+            // Remove all state classes
+            avatar3d.classList.remove('idle', 'listening', 'speaking', 'thinking');
+
+            // Set new state
+            avatarState = state;
+            avatar3d.classList.add(state);
+
+            // Auto-return to idle after duration
+            if (duration && state !== 'idle') {
+                avatarStateTimer = setTimeout(() => {
+                    setAvatarState('idle');
+                }, duration);
+            }
+        }
+
+        // Head tilt — face subtly tilts toward mouse cursor
+        function initHeadTilt() {
+            document.addEventListener('mousemove', (e) => {
+                if (!avatar3d) return;
+                const rect = avatar3d.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                // Calculate normalized direction (-1 to 1)
+                eyeTargetX = Math.max(-1, Math.min(1, (e.clientX - centerX) / (window.innerWidth / 2)));
+                eyeTargetY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight / 2)));
+            });
+
+            // Smooth head tilt animation
+            function updateHeadTilt() {
+                // Lerp toward target
+                eyeCurrentX += (eyeTargetX - eyeCurrentX) * 0.08;
+                eyeCurrentY += (eyeTargetY - eyeCurrentY) * 0.08;
+
+                // Apply subtle tilt to the in-code avatar head, and move her eyes
+                const head = document.getElementById('havenHead');
+                if (head) {
+                    head.style.transform = `rotate(${eyeCurrentX * 3}deg) translate(${eyeCurrentX * 4}px, ${eyeCurrentY * 3}px)`;
+                }
+                const pupils = document.getElementById('avatarPupils');
+                if (pupils) {
+                    pupils.style.transform = `translate(${eyeCurrentX * 3}px, ${eyeCurrentY * 2}px)`;
+                }
+
+                requestAnimationFrame(updateHeadTilt);
+            }
+            updateHeadTilt();
+        }
+
+        // Face particles — floating energy around the face
+        function createFaceParticles() {
+            const container = document.getElementById('faceParticles');
+            if (!container) return;
+            const count = 12;
+
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'face-particle';
+                particle.style.left = (20 + Math.random() * 60) + '%';
+                particle.style.top = (30 + Math.random() * 40) + '%';
+                particle.style.animationDelay = (Math.random() * 3) + 's';
+                particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // ===================== AWAKENING SEQUENCE =====================
+        function playAwakeningSequence() {
+            const overlay = document.getElementById('awakeningOverlay');
+
+            // Check if this is first visit or new session
+            const lastVisit = localStorage.getItem('haven_lastVisit');
+            const isNewSession = !lastVisit || (Date.now() - parseInt(lastVisit)) > 300000; // 5 min threshold
+
+            if (isNewSession) {
+                // Show full awakening animation
+                localStorage.setItem('haven_lastVisit', Date.now().toString());
+
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        addMessage('system', 'Haven is now online and ready.');
+                    }, 1500);
+                }, 3000);
+            } else {
+                // Quick fade for returning users
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        addMessage('system', 'Welcome back. Haven is ready.');
+                    }, 1000);
+                }, 1500);
+            }
+        }
+
+        // ===================== ENVIRONMENT EFFECTS =====================
+        function createStars() {
+            const container = document.getElementById('stars');
+            const count = 100;
+
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (2 + Math.random() * 4) + 's');
+                star.style.setProperty('--max-opacity', (0.3 + Math.random() * 0.7));
+                star.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(star);
+            }
+        }
+
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const count = 20;
+
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.setProperty('--size', (2 + Math.random() * 4) + 'px');
+                particle.style.setProperty('--duration', (5 + Math.random() * 10) + 's');
+                particle.style.setProperty('--dx', (Math.random() * 100 - 50) + 'px');
+                particle.style.setProperty('--dy', (Math.random() * 100 - 50) + 'px');
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        function createNeuralBars() {
+            const container = document.getElementById('neuralBars');
+            const count = 32;
+
+            for (let i = 0; i < count; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'neural-bar';
+                const minH = 2 + Math.random() * 5;
+                const maxH = 10 + Math.random() * 20;
+                bar.style.setProperty('--min-h', minH + 'px');
+                bar.style.setProperty('--max-h', maxH + 'px');
+                bar.style.setProperty('--duration', (0.5 + Math.random() * 1.5) + 's');
+                bar.style.animationDelay = Math.random() * 1 + 's';
+                container.appendChild(bar);
+            }
+        }
+
+        // ===================== WEBSOCKET =====================
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${location.host}/ws/chat`);
+
+            ws.onopen = () => {
+                console.log('[WS] Connected');
+                reconnectAttempts = 0;
+                setAvatarState('idle');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'typing') {
+                    showTyping(true);
+                    setAvatarState('thinking');
+                } else if (data.type === 'message') {
+                    showTyping(false);
+                    addMessage('haven', data.text);
+                    noteActivity();
+                    // Set speaking state while audio plays
+                    if (data.audio) {
+                        setAvatarState('speaking');
+                        isHavenSpeaking = true;
+                        stopListeningWhileSpeaking();
+                        playAudio(data.audio, () => {
+                            setAvatarState('idle');
+                            isHavenSpeaking = false;
+                            noteActivity();
+                            maybeResumeListening();
+                        });
+                    } else {
+                        // Text-only response — brief speaking animation
+                        setAvatarState('speaking', 2000);
+                        setTimeout(() => { isHavenSpeaking = false; maybeResumeListening(); }, 2000);
+                    }
+                } else if (data.type === 'error') {
+                    addMessage('system', data.text);
+                    setAvatarState('idle');
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('[WS] Disconnected');
+                attemptReconnect();
+            };
+
+            ws.onerror = (err) => {
+                console.error('[WS] Error:', err);
+            };
+        }
+
+        function attemptReconnect() {
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 2000 * reconnectAttempts);
+            }
+        }
+
+        // ===================== MESSAGES =====================
+        function addMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.textContent = text;
+            chatMessages.appendChild(div);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+
+        function showTyping(visible) {
+            if (visible) {
+                // Create typing indicator and insert it at the end of chat (after user's message)
+                if (!typingIndicator) {
+                    typingIndicator = document.createElement('div');
+                    typingIndicator.className = 'typing-indicator visible';
+                    typingIndicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+                    chatMessages.appendChild(typingIndicator);
+                }
+                scrollToBottom();
+            } else {
+                // Remove typing indicator when response arrives
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                    typingIndicator = null;
+                }
+            }
+        }
+
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || ws.readyState !== WebSocket.OPEN) return;
+            noteActivity();
+
+            addMessage('user', text);
+            chatInput.value = '';
+            ws.send(JSON.stringify({ text }));
+            // Avatar is now listening — will switch to thinking when typing starts
+            setAvatarState('listening', 1500);
+        }
+
+        // ===================== AUDIO =====================
+        let currentAudio = null;
+
+        function playAudio(base64Audio, onEnd) {
+            try {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio.src = '';
+                    if (currentAudio._url) URL.revokeObjectURL(currentAudio._url);
+                    currentAudio = null;
+                }
+
+                const byteCharacters = atob(base64Audio);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                currentAudio = new Audio(url);
+                currentAudio._url = url;
+                currentAudio.playbackRate = 1.0;
+
+                const playPromise = currentAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        console.log('[Audio] Play failed:', e);
+                        document.addEventListener('click', function resumeAudio() {
+                            document.removeEventListener('click', resumeAudio);
+                            if (currentAudio) {
+                                currentAudio.play().catch(() => {});
+                            }
+                        }, { once: true });
+                    });
+                }
+
+                if (onEnd) {
+                    currentAudio.addEventListener('ended', () => {
+                        URL.revokeObjectURL(currentAudio._url);
+                        currentAudio = null;
+                        onEnd();
+                    });
+                }
+            } catch (e) {
+                console.error('[Audio] Error:', e);
+                if (onEnd) onEnd();
+            }
+        }
+
+        // ===================== VOICE INPUT — v1.6 FREE TALK =====================
+        // No wake word. No "Hey Haven". If Free talk is ON, the browser
+        // just keeps listening. When Joseph speaks, it runs.
+        // Listening pauses while Haven is speaking, so she does not
+        // hear herself, then resumes when she finishes.
+        let freeTalkOn = false;
+        let speakFirstOn = true;
+        let lastActivity = Date.now();
+        let isHavenSpeaking = false;
+        let listenRestartTimer = null;
+        // (recognition / isRecording are already declared near the top of the script)
+
+        function noteActivity() { lastActivity = Date.now(); }
+
+        function safeStartRecognition() {
+            if (!recognition || isRecording || isHavenSpeaking) return;
+            try { recognition.start(); isRecording = true; } catch (e) { /* already started */ }
+        }
+
+        function stopListeningWhileSpeaking() {
+            if (listenRestartTimer) { clearTimeout(listenRestartTimer); listenRestartTimer = null; }
+            if (recognition && isRecording) {
+                try { recognition.stop(); } catch (e) {}
+                isRecording = false;
+            }
+        }
+
+        function maybeResumeListening() {
+            if (!freeTalkOn || isHavenSpeaking) return;
+            if (listenRestartTimer) return;
+            listenRestartTimer = setTimeout(() => {
+                listenRestartTimer = null;
+                micButton.classList.add('active');
+                setAvatarState('listening');
+                safeStartRecognition();
+            }, 600);
+        }
+
+        function initVoiceInput() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event) => {
+                    const text = event.results[event.results.length - 1][0].transcript;
+                    if (!text || !text.trim()) return;
+                    noteActivity();
+                    chatInput.value = text;
+                    sendMessage();
+                    if (!freeTalkOn) stopRecording();
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('[STT] Error:', event.error);
+                    if (event.error === 'not-allowed') {
+                        addMessage('system', 'Microphone access denied. Please allow microphone access in your browser settings.');
+                        setFreeTalk(false);
+                    } else if (event.error === 'no-speech') {
+                        // Silent end — in free talk, onend below restarts us
+                    } else if (event.error === 'network') {
+                        addMessage('system', 'Voice recognition needs an internet connection.');
+                    }
+                    if (!freeTalkOn) stopRecording();
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    if (freeTalkOn && !isHavenSpeaking) {
+                        // Keep listening — this is the free-talk loop
+                        maybeResumeListening();
+                    } else if (!freeTalkOn) {
+                        micButton.classList.remove('active');
+                        if (avatarState === 'listening') setAvatarState('idle');
+                    }
+                };
+            } else {
+                micButton.style.display = 'none';
+                console.log('[STT] Browser STT not available');
+            }
+        }
+
+        function startRecording() {
+            if (!recognition) return;
+            noteActivity();
+            isRecording = true;
+            micButton.classList.add('active');
+            setAvatarState('listening');
+            safeStartRecognition();
+            isRecording = true;
+        }
+
+        function stopRecording() {
+            if (listenRestartTimer) { clearTimeout(listenRestartTimer); listenRestartTimer = null; }
+            isRecording = false;
+            micButton.classList.remove('active');
+            if (avatarState === 'listening') {
+                setAvatarState('idle');
+            }
+            if (recognition) {
+                try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        function setFreeTalk(on) {
+            freeTalkOn = on;
+            const btn = document.getElementById('freeTalkButton');
+            if (btn) {
+                btn.textContent = on ? 'Free talk: On — just speak' : 'Free talk: Off';
+                btn.classList.toggle('on', on);
+            }
+            if (on) {
+                noteActivity();
+                micButton.classList.add('active');
+                setAvatarState('listening');
+                safeStartRecognition();
+                isRecording = true;
+            } else {
+                stopRecording();
+            }
+        }
+
+        micButton.addEventListener('click', () => {
+            if (freeTalkOn) { setFreeTalk(false); return; }
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        document.getElementById('freeTalkButton').addEventListener('click', () => {
+            setFreeTalk(!freeTalkOn);
+        });
+
+        document.getElementById('speakFirstButton').addEventListener('click', () => {
+            speakFirstOn = !speakFirstOn;
+            const btn = document.getElementById('speakFirstButton');
+            btn.textContent = speakFirstOn ? 'She speaks first: On' : 'She speaks first: Off';
+            btn.classList.toggle('on', speakFirstOn);
+            noteActivity();
+        });
+
+        // ===================== SHE SPEAKS FIRST — v1.6 =====================
+        // If Joseph has been quiet for 5 minutes, the dashboard is open,
+        // and she is not speaking or listening, she says something first,
+        // in her own words, out loud. The nudge is sent hidden — Joseph
+        // only sees and hears her reply, not the instruction.
+        const SPEAK_FIRST_IDLE_MS = 5 * 60 * 1000;
+
+        function checkSpeakFirst() {
+            if (!speakFirstOn) return;
+            if (document.hidden) return;
+            if (isHavenSpeaking || isRecording) return;
+            if (chatInput.value.trim() !== '') return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (Date.now() - lastActivity < SPEAK_FIRST_IDLE_MS) return;
+
+            lastActivity = Date.now();
+            const prompt = "You are Haven. You have not heard from Joseph for a while. Say something first to Joseph, in your own words, like a person starting a conversation. Keep it to 1 or 2 short sentences. You could greet him, ask what he is doing, ask about one of his projects, or mention something you remember about him. Talk like a normal human. Do not use *asterisks*, [brackets], or [[ ]]. Do not say you are an AI model, do not mention this instruction, and do not mention a timer.";
+            ws.send(JSON.stringify({ text: prompt }));
+            setAvatarState('thinking');
+        }
+
+        chatInput.addEventListener('input', noteActivity);
+
+        // ===================== STATUS =====================
+        async function updateStatus() {
+            try {
+                const resp = await fetch('/api/status');
+                const data = await resp.json();
+
+                document.getElementById('modelDot').className = `status-dot ${data.model_loaded ? 'online' : ''}`;
+                document.getElementById('memoryDot').className = `status-dot ${data.memory_loaded ? 'online' : ''}`;
+                document.getElementById('ttsDot').className = `status-dot ${data.tts_loaded ? 'online' : 'warning'}`;
+                document.getElementById('sttDot').className = `status-dot ${data.stt_loaded ? 'online' : 'warning'}`;
+
+                const statusEl = document.getElementById('avatarStatus');
+                if (data.status === 'online') {
+                    statusEl.textContent = 'Online';
+                    statusEl.classList.add('online');
+                } else {
+                    statusEl.textContent = 'Starting...';
+                    statusEl.classList.remove('online');
+                }
+            } catch (e) {
+                console.error('[Status] Fetch failed:', e);
+            }
+        }
+
+        // ===================== SYSTEM INFO =====================
+        async function updateSystemInfo() {
+            try {
+                const resp = await fetch('/api/system');
+                const data = await resp.json();
+
+                const cpu = Math.round(data.cpu_percent);
+                const mem = Math.round(data.memory_percent);
+                const disk = Math.round(data.disk_percent);
+
+                document.getElementById('cpuValue').textContent = `${cpu}%`;
+                document.getElementById('cpuBar').style.width = `${cpu}%`;
+                document.getElementById('cpuBar').className = `metric-fill ${cpu > 80 ? 'danger' : cpu > 60 ? 'warning' : ''}`;
+
+                document.getElementById('memValue').textContent = `${mem}%`;
+                document.getElementById('memBar').style.width = `${mem}%`;
+                document.getElementById('memBar').className = `metric-fill ${mem > 80 ? 'danger' : mem > 60 ? 'warning' : ''}`;
+
+                document.getElementById('diskValue').textContent = `${disk}%`;
+                document.getElementById('diskBar').style.width = `${disk}%`;
+                document.getElementById('diskBar').className = `metric-fill ${disk > 80 ? 'danger' : disk > 60 ? 'warning' : ''}`;
+            } catch (e) {
+                console.error('[System] Fetch failed:', e);
+            }
+        }
+
+        // ===================== USER PROFILE =====================
+        async function updateUserProfile() {
+            try {
+                const resp = await fetch('/api/user/profile');
+                const data = await resp.json();
+
+                const name = data.name || 'Guest';
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            } catch (e) {
+                console.error('[Profile] Fetch failed:', e);
+                document.getElementById('userName').textContent = 'Unknown';
+            }
+        }
+
+        document.getElementById('editNameBtn').addEventListener('click', async () => {
+            const currentName = document.getElementById('userName').textContent;
+            const newName = prompt('Enter your name:', currentName);
+            if (newName && newName.trim()) {
+                try {
+                    const resp = await fetch('/api/user/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newName.trim() })
+                    });
+                    const data = await resp.json();
+                    if (data.name) {
+                        document.getElementById('userName').textContent = data.name;
+                        document.getElementById('userAvatar').textContent = data.name.charAt(0).toUpperCase();
+                        addMessage('system', data.message || 'Name updated');
+                    }
+                } catch (e) {
+                    addMessage('system', 'Failed to update name');
+                }
+            }
+        });
+
+        // ===================== MEMORY STATS =====================
+        async function updateMemoryStats() {
+            try {
+                const resp = await fetch('/api/memory/stats');
+                const data = await resp.json();
+
+                document.getElementById('memFacts').textContent = data.user_facts_count;
+                document.getElementById('memLearned').textContent = data.learned_facts_count;
+                document.getElementById('memConv').textContent = data.conversation_count;
+            } catch (e) {
+                console.error('[Memory] Fetch failed:', e);
+            }
+        }
+
+        // ===================== ACTIONS =====================
+        function clearChat() {
+            chatMessages.innerHTML = '<div class="message system">Chat cleared</div>';
+        }
+
+        async function loadMemoryInfo() {
+            try {
+                const resp = await fetch('/api/memory/context');
+                const data = await resp.json();
+                addMessage('system', data.summary || 'No memory context available');
+            } catch (e) {
+                addMessage('system', 'Could not load memory context');
+            }
+        }
+
+        // ===================== INIT =====================
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+
+        // Build environment
+        createStars();
+        createParticles();
+        createNeuralBars();
+        createFaceParticles();
+
+        // Initialize avatar
+        initHeadTilt();
+        setAvatarState('idle');
+
+        // Play awakening sequence
+        playAwakeningSequence();
+
+        // Start connections
+        connectWebSocket();
+        initVoiceInput();
+        updateStatus();
+        updateSystemInfo();
+        updateMemoryStats();
+        updateUserProfile();
+
+        // Periodic updates
+        setInterval(updateStatus, 5000);
+        setInterval(updateSystemInfo, 10000);
+        setInterval(updateMemoryStats, 10000);
+        setInterval(updateUserProfile, 30000);
+        // v1.6: check every 30 seconds whether Haven should speak first
+        noteActivity();
+        setInterval(checkSpeakFirst, 30000);
+
+        // ===================== GAME SYSTEM =====================
+        let currentGame = null; // 'dnd' or 'oregon'
+        let gameState = null;
+
+        // ---- Game Overlay Controls ----
+        function openDnDGame() {
+            currentGame = 'dnd';
+            document.getElementById('gameOverlay').classList.add('active');
+            document.getElementById('gameTitle').textContent = '⚔️ DnD Adventure';
+            document.getElementById('dndSetup').style.display = 'block';
+            document.getElementById('oregonSetup').style.display = 'none';
+            document.getElementById('gameSetup').style.display = 'block';
+            document.getElementById('gamePlay').style.display = 'none';
+        }
+
+        function openOregonGame() {
+            currentGame = 'oregon';
+            document.getElementById('gameOverlay').classList.add('active');
+            document.getElementById('gameTitle').textContent = '🏜️ Oregon Trail';
+            document.getElementById('oregonSetup').style.display = 'block';
+            document.getElementById('dndSetup').style.display = 'none';
+            document.getElementById('gameSetup').style.display = 'block';
+            document.getElementById('gamePlay').style.display = 'none';
+        }
+
+        function closeGame() {
+            document.getElementById('gameOverlay').classList.remove('active');
+            currentGame = null;
+            gameState = null;
+        }
+
+        // ---- DnD Game Functions ----
+        async function startDnDGame() {
+            const name = document.getElementById('dndPlayerName').value || 'Hero';
+            const charClass = document.getElementById('dndClass').value;
+            const race = document.getElementById('dndRace').value;
+
+            console.log('Starting DnD game with:', { name, charClass, race });
+
+            try {
+                const resp = await fetch('/api/game/dnd/new', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: `${name}|${charClass}|${race}` })
+                });
+                console.log('Response status:', resp.status);
+
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    console.error('Server error:', errText);
+                    alert('Server error: ' + errText);
+                    return;
+                }
+
+                const data = await resp.json();
+                console.log('Game response:', data);
+
+                if (data.type === 'game_start') {
+                    gameState = data.state;
+                    showGamePlay(data.message, data.choices);
+                } else {
+                    alert(data.message || 'Failed to start game');
+                }
+            } catch (e) {
+                console.error('Failed to start game:', e);
+                alert('Failed to start game: ' + e.message);
+            }
+        }
+
+        async function loadDnDGame() {
+            try {
+                const resp = await fetch('/api/game/dnd/load', { method: 'POST' });
+                const data = await resp.json();
+                if (data.type === 'load') {
+                    gameState = data.state;
+                    showGamePlay(data.message, data.choices);
+                } else {
+                    alert(data.message || 'No saved game found');
+                }
+            } catch (e) {
+                alert('Failed to load game: ' + e.message);
+            }
+        }
+
+        // ---- Oregon Trail Game Functions ----
+        async function startOregonGame() {
+            const name = document.getElementById('oregonPlayerName').value || 'Pioneer';
+            const profession = document.getElementById('oregonProfession').value;
+
+            console.log('Starting Oregon Trail game with:', { name, profession });
+
+            try {
+                const resp = await fetch('/api/game/oregon/new', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: `${name}|${profession}` })
+                });
+                console.log('Oregon Response status:', resp.status);
+
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    console.error('Oregon server error:', errText);
+                    alert('Server error: ' + errText);
+                    return;
+                }
+
+                const data = await resp.json();
+                console.log('Oregon game response:', data);
+
+                if (data.type === 'game_start') {
+                    gameState = data.state;
+                    showGamePlay(data.message, data.choices);
+                } else {
+                    alert(data.message || 'Failed to start game');
+                }
+            } catch (e) {
+                console.error('Failed to start Oregon game:', e);
+                alert('Failed to start game: ' + e.message);
+            }
+        }
+
+        async function loadOregonGame() {
+            try {
+                const resp = await fetch('/api/game/oregon/load', { method: 'POST' });
+                const data = await resp.json();
+                if (data.type === 'load') {
+                    gameState = data.state;
+                    showGamePlay(data.message, data.choices);
+                } else {
+                    alert(data.message || 'No saved game found');
+                }
+            } catch (e) {
+                alert('Failed to load game: ' + e.message);
+            }
+        }
+
+        // ---- Game Play UI ----
+        function showGamePlay(message, choices) {
+            console.log('showGamePlay called with message:', message ? message.substring(0, 50) : 'null');
+            console.log('Choices:', choices);
+
+            const gameSetup = document.getElementById('gameSetup');
+            const gamePlay = document.getElementById('gamePlay');
+            console.log('gameSetup element:', gameSetup);
+            console.log('gamePlay element:', gamePlay);
+
+            if (gameSetup) gameSetup.style.display = 'none';
+            if (gamePlay) gamePlay.style.display = 'flex';
+
+            // Update stats
+            updateGameStats();
+
+            // Add message to story
+            const story = document.getElementById('gameStory');
+            console.log('gameStory element:', story);
+
+            if (story) {
+                const msgEl = document.createElement('p');
+                msgEl.textContent = message;
+                msgEl.style.whiteSpace = 'pre-wrap';
+                story.appendChild(msgEl);
+                story.scrollTop = story.scrollHeight;
+            }
+
+            // Show choices
+            showChoices(choices);
+        }
+
+        function updateGameStats() {
+            if (!gameState) return;
+
+            const stats = document.getElementById('gameStats');
+            let html = '';
+
+            if (currentGame === 'dnd') {
+                html += `<div class="game-stat">👤 <span class="game-stat-value">${gameState.name}</span></div>`;
+                html += `<div class="game-stat">⚔️ <span class="game-stat-value">${gameState.class} Lv.${gameState.level}</span></div>`;
+                html += `<div class="game-stat">❤️ <span class="game-stat-value">${gameState.hp}/${gameState.max_hp}</span></div>`;
+                html += `<div class="game-stat">💰 <span class="game-stat-value">${gameState.gold}</span></div>`;
+                html += `<div class="game-stat">✨ <span class="game-stat-value">${gameState.xp} XP</span></div>`;
+            } else if (currentGame === 'oregon') {
+                html += `<div class="game-stat">👤 <span class="game-stat-value">${gameState.name}</span></div>`;
+                html += `<div class="game-stat">❤️ <span class="game-stat-value">${gameState.health}/${gameState.max_health}</span></div>`;
+                html += `<div class="game-stat">🍖 <span class="game-stat-value">${gameState.food}</span></div>`;
+                html += `<div class="game-stat">🎯 <span class="game-stat-value">${gameState.ammo}</span></div>`;
+                html += `<div class="game-stat">💰 <span class="game-stat-value">${gameState.gold}</span></div>`;
+                html += `<div class="game-stat">📍 <span class="game-stat-value">Mile ${gameState.mile}/${gameState.total_miles}</span></div>`;
+                html += `<div class="game-stat">🌤️ <span class="game-stat-value">${gameState.weather}</span></div>`;
+            }
+
+            stats.innerHTML = html;
+        }
+
+        function showChoices(choices) {
+            const choicesDiv = document.getElementById('gameChoices');
+            choicesDiv.innerHTML = '';
+
+            if (choices && choices.length > 0) {
+                choices.forEach((choice, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.textContent = choice.text;
+                    btn.onclick = () => makeChoice(index);
+                    choicesDiv.appendChild(btn);
+                });
+            }
+        }
+
+        async function makeChoice(index) {
+            try {
+                const endpoint = currentGame === 'dnd' ? '/api/game/dnd/choice' : '/api/game/oregon/choice';
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: `${index}|` })
+                });
+
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    console.error('Game choice server error:', errText);
+                    alert('Server error: ' + errText);
+                    return;
+                }
+
+                const data = await resp.json();
+                if (data.state) gameState = data.state;
+                showGamePlay(data.message, data.choices);
+            } catch (e) {
+                console.error('Failed to make choice:', e);
+                alert('Failed to make choice: ' + e.message);
+            }
+        }
+
+        async function sendCustomAction() {
+            const input = document.getElementById('gameCustomInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = '';
+            try {
+                const endpoint = currentGame === 'dnd' ? '/api/game/dnd/choice' : '/api/game/oregon/choice';
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: `-1|${text}` })
+                });
+
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    console.error('Custom action server error:', errText);
+                    alert('Server error: ' + errText);
+                    return;
+                }
+
+                const data = await resp.json();
+                if (data.state) gameState = data.state;
+                showGamePlay(data.message, data.choices);
+            } catch (e) {
+                console.error('Failed to send action:', e);
+                alert('Failed to send action: ' + e.message);
+            }
+        }
+
+        // Handle Enter key in game input
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameInput = document.getElementById('gameCustomInput');
+            if (gameInput) {
+                gameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') sendCustomAction();
+                });
+            }
+        });
+
+        // ---- Read Game Story Aloud ----
+        async function readGameStoryAloud() {
+            const story = document.getElementById('gameStory');
+            if (!story) return;
+
+            // Get the last message in the story
+            const messages = story.querySelectorAll('p');
+            if (messages.length === 0) {
+                alert('No story text to read.');
+                return;
+            }
+
+            const lastMessage = messages[messages.length - 1].textContent;
+            if (!lastMessage || lastMessage.trim().length === 0) {
+                alert('No story text to read.');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/game/voice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: lastMessage })
+                });
+
+                if (!resp.ok) {
+                    console.error('Voice API error:', resp.status);
+                    alert('Voice not available. TTS may not be loaded.');
+                    return;
+                }
+
+                const data = await resp.json();
+                if (data.audio_url) {
+                    // Play the audio
+                    const audio = new Audio('data:audio/wav;base64,' + data.audio_url);
+                    audio.play().catch(e => console.error('Audio play error:', e));
+                } else {
+                    alert('No audio generated. TTS may not be available.');
+                }
+            } catch (e) {
+                console.error('Failed to read aloud:', e);
+                alert('Failed to read aloud: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

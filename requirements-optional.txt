@@ -1,0 +1,8 @@
+# Optional future dependencies for Haven.
+# Install only when the corresponding feature is implemented.
+
+# Web search integration (future)
+# duckduckgo-search
+
+# NAS encryption and backup (future)
+# paramiko

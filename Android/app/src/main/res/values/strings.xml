@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Haven AI</string>
+    <string name="send_message">Send message to Haven</string>
+    <string name="type_message">Type a message&#8230;</string>
+    <string name="connecting">Connecting to Haven&#8230;</string>
+    <string name="connection_error">Cannot connect to Haven server. Ensure your PC is on and Tailscale is running.</string>
+    <string name="status">Status</string>
+    <string name="model_loaded">Model</string>
+    <string name="memory_loaded">Memory</string>
+    <string name="tts_loaded">TTS</string>
+    <string name="stt_loaded">STT</string>
+    <string name="server_url_hint">Server URL (Tailscale IP)</string>
+    <string name="default_server_url">http://100.102.81.112:8000</string>
+</resources>

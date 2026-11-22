@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Android
+.gradle/
+local.properties
+/.idea/
+app/build/
+*.apk
+*.ap_
+*.aab
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Large model files (~2.7GB+)
+Model/
+
+# Backup archives
+*.7z
+*.zip
+*.tar.gz
+Pc - backup v1.2.7z
+Pc-backup v.1.8.7z
+Pc-backup v1.1.7z
+Pc-backup v1.3.7z
+Pc-backup v1.7z
+Pc-backup-2026-11-19.7z
+
+# Blender projects
+blender creation project/
+
+# Runtime data
+Pc/logs/
+Pc/saves/
+Pc/memory/storage.json
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Junie session files
+.junie/

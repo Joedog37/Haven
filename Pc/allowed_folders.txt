@@ -1,0 +1,13 @@
+# allowed_folders.txt - example for Haven Agent v1
+# One folder per line. Haven's agent can ONLY change files in these folders.
+# Lines starting with # are comments and are ignored.
+# Start with just the Pc folder (that is the default, even without this file).
+# Add more folders later, one at a time, when you want Haven to work on them.
+#
+# Example (remove the # to use it - change the drive letter to match your PC):
+# G:\Haven
+# G:\Haven\Android
+# D:\MyProjects
+#
+# WARNING: do NOT add C:\ or C:\Users or a whole drive here.
+# That would let Haven change Windows files. Add one project folder at a time.

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <!-- Haven message bubble (left aligned) -->
+    <TextView
+        android:id="@+id/textHaven"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginEnd="56dp"
+        android:background="@drawable/bg_haven_bubble"
+        android:padding="12dp"
+        android:textColor="#E0E0E0"
+        android:textSize="15sp"
+        android:lineSpacingExtra="2dp"
+        android:visibility="gone" />
+
+    <!-- User message bubble (right aligned) -->
+    <TextView
+        android:id="@+id/textUser"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginStart="56dp"
+        android:background="@drawable/bg_user_bubble"
+        android:padding="12dp"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:lineSpacingExtra="2dp"
+        android:visibility="gone" />
+
+</FrameLayout>

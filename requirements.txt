@@ -1,0 +1,33 @@
+# Haven's local runtime. Install only when you choose to do so:
+#   Pc\venv\Scripts\python.exe -m pip install -r requirements.txt
+# Haven never installs these automatically at startup.
+
+# Note: Haven now uses Ollama for AI inference. Install Ollama from https://ollama.com
+# and run "ollama pull llama3.1" to download the default model.
+
+# Local-only API and data handling
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+pydantic>=2.7,<3
+orjson>=3.10,<4
+aiohttp>=3.10,<4
+websockets>=12,<14
+python-multipart>=0.0.9,<1
+
+# Voice - Text-to-Speech (Kokoro)
+kokoro-onnx>=0.3,<1
+soundfile>=0.12,<1
+
+# Voice - Speech-to-Text (Vosk)
+vosk>=0.3.45,<1
+
+# Microphone capture
+pyaudio>=0.2.11,<1
+
+# Web search for knowledge lookup (optional — Haven works without it)
+duckduckgo-search>=7.0,<8
+
+# Local storage, encryption, and avatar image handling
+Pillow>=10,<12
+cryptography>=43,<50
+psutil>=6,<8
